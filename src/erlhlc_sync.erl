@@ -38,27 +38,21 @@ init([ClockFun]) ->
     end.
 
 handle_call(now, _From, C) ->
-    N = hlc:now(C),
-    self() ! {flood, N},
-    {reply, N, C};
-handle_call({update, RT}, _From, C) ->    
-    io:format("update ~p~n", [RT]),
-    {reply, hlc:update(C, RT), C}.
+    T = hlc:now(C),
+    ?SERVER ! {flood, T},
+    {reply, T, C};
+handle_call(timestamp, _From, C) ->
+    {reply, hlc:timestamp(C), C}.
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({flood, N}, C) ->
-    case nodes() of
-        [] -> ok;
-        Nodes ->
-            {ResL, _BadNodes} = rpc:multicall(Nodes, gen_server, call, [?SERVER, {update, N}]),
-            case ResL of
-                [] -> ok;
-                ResL ->
-                    catch hlc:update(C, lists:max(ResL))
-            end
-    end,
+handle_info({update, RT}, C) ->
+    NewRT = hlc:update(C, RT),
+    io:format("update ~p~n", [{RT, NewRT}]),
+    {noreply, C};
+handle_info({flood, RT}, C) ->
+    [{?SERVER, Node} ! {update, RT} || Node <- nodes()],
     {noreply, C}.
 
 terminate(_Reason, _State) ->
