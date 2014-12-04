@@ -1,0 +1,18 @@
+%%-*- mode: erlang -*-
+%% ex: ft=erlang
+
+{application, erlhlc,
+ [
+  {description, "Cluster Hybrid Logical Clock"},
+  {vsn, "0.0.1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, {erlhlc, []}},
+  {env, [{clockfun, <<"fun() -> "
+                      " {Mega,Sec,Micro} = erlang:now(), "
+                      " (Mega*1000000+Sec)*1000000+Micro "
+                      "end.">>}]}
+ ]}.
