@@ -23,8 +23,29 @@ if [[ "$1" == "-hb" ]]; then
 fi
 
 # Node name
-node="erlhlc0@$hbhost"
+ndnam="erlhlc0"
+node="$ndnam@$hbhost"
 node_name="-name $node"
+
+HBFmt=$(echo $hbhost | sed 's/WKS\([0-9]\{3\}\)\(h.*\)/\1-\2/')
+HBPrts=(${HBFmt//-/ })
+OtherHosts="[]"
+if [[ "${#HBPrts[@]}" == "2" ]]; then
+    LNum=${HBPrts[0]}
+    HSuff=${HBPrts[1]}
+    for i in $(seq -f "%03g" 10 15)
+    do
+        if [[ "$i" -ne "$LNum" ]]; then
+            if [[ $OtherHosts == "[]" ]]; then
+                OtherHosts="["
+            else
+                OtherHosts=$OtherHosts","
+            fi
+            OtherHosts=$OtherHosts"'$ndnam@WKS$i$HSuff'"
+        fi
+    done
+    OtherHosts=$OtherHosts"]"
+fi
 
 # Cookie
 cookie="-setcookie erlhlc"
@@ -43,10 +64,11 @@ echo "------------------------------------------"
 echo "Cookie    : $cookie"
 echo "EBIN Path : $paths"
 echo "Command   : $exename $start_opts -s erlhlc"
+echo "OtherHost : $OtherHosts"
 echo "------------------------------------------"
 
 # Starting erlhlc
-$exename $start_opts -s erlhlc
+$exename $start_opts -s erlhlc -eval "[apply(net_adm,ping,[N])||N<-$OtherHosts]."
 
 if [[ "$1" == "-hb" ]]; then
     nodes=$2
