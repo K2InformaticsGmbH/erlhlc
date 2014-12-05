@@ -1,5 +1,8 @@
 -module(erlhlc_sync).
 -behaviour(gen_server).
+
+-include_lib("hlc/include/hlc.hrl").
+
 -define(SERVER, ?MODULE).
 
 %% ------------------------------------------------------------------
@@ -48,9 +51,11 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
 
 handle_info({update, RT}, C) ->
-    LT = hlc:update(C, RT),
-    print_if_past(LT, RT),
-    io:format("UPD ~p -- ~p~n", [RT, LT]),
+    CLT = hlc:timestamp(C),
+    RTN = RT#timestamp.wall_time + RT#timestamp.logical,
+    LTN = CLT#timestamp.wall_time + CLT#timestamp.logical,
+    io:format("UPD ~p~n", [RTN - LTN]),
+    _LT = hlc:update(C, RT),
     {noreply, C};
 handle_info({flood, T}, C) ->
     [{?SERVER, Node} ! {update, T} || Node <- nodes()],
@@ -65,13 +70,3 @@ code_change(_OldVsn, State, _Extra) ->
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
-
-%-ifdef(TEST).
-print_if_past(LT, RT) ->
-    if LT >= RT ->
-           io:format("UPD Past ~p -- ~p~n", [RT, LT]);
-       true -> ok
-    end.
-%-else.
-%print_if_past(_LT, _RT) -> ok.
-%-endif. % TEST

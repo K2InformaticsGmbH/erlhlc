@@ -68,21 +68,20 @@ echo "OtherHost : $OtherHosts"
 echo "------------------------------------------"
 
 # Starting erlhlc
-$exename $start_opts -s erlhlc -eval "[apply(net_adm,ping,[N])||N<-$OtherHosts]."
+$exename $start_opts -s erlhlc -eval "[apply(net_adm,ping,[N]) || N <- $OtherHosts]."
 
 if [[ "$1" == "-hb" ]]; then
     nodes=$2
+elif [[ "$1" == "" ]]; then
+    nodes="0"
 else
     nodes=$1
-fi
-
-if [[ "$nodes" -le "0" ]]; then
-    nodes=0
 fi
 
 for (( c=1; c<=$nodes; c++ ))
 do
     node_name="-name erlhlc$c@$hbhost"
     start_opts="$paths $cookie $node_name"
+    echo "$exename $start_opts -s erlhlc -eval \"apply(net_adm,ping,['$node']).\""
     $exename $start_opts -s erlhlc -eval "apply(net_adm,ping,['$node'])."
 done
