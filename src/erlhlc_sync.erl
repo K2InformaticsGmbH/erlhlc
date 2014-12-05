@@ -30,7 +30,7 @@ start_link(ClockFun) ->
 %% ------------------------------------------------------------------
 
 init([undefined]) ->
-    case hlc:init([fun physical_clock/0]) of
+    case hlc:init([fun hlc:physical_clock/0]) of
         {ok, C} -> {ok, C};
         Error -> Error
     end;
@@ -42,7 +42,7 @@ init([ClockFun]) ->
 
 handle_call(now, From, C) ->
     {reply, T, C1} = hlc:handle_call(now, From, C),
-    [{?SERVER, Node} ! {update, node(), T} || Node <- nodes()],
+    [{?SERVER, Node} ! {update, T} || Node <- nodes()],
     {reply, T, C1};
 handle_call(timestamp, _From, C) ->
     {reply, CLT, C} = hlc:handle_call(timestamp, undefined, C),
@@ -51,17 +51,8 @@ handle_call(timestamp, _From, C) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({update, N, RT}, C) ->
-    %{reply, CLT, C} = hlc:handle_call(timestamp, undefined, C),
-    %case (RT#timestamp.wall_time + RT#timestamp.logical)
-    %     - (CLT#timestamp.wall_time + CLT#timestamp.logical) of
-    %    TNDiff when TNDiff > 1000 ->
-    %        io:format("UPD ~p~n", [TNDiff]);
-    %    TNDiff when TNDiff < -1000 ->
-    %        io:format("UPD ~p~n", [TNDiff]);
-    %    _ -> ok
-    %end,
-    {reply, _LT, C1} = hlc:handle_call({update, N, RT}, undefined, C),
+handle_info({update, RT}, C) ->
+    {reply, _LT, C1} = hlc:handle_call({update, RT}, undefined, C),
     {noreply, C1}.
 
 terminate(_Reason, _State) ->
@@ -73,7 +64,3 @@ code_change(_OldVsn, State, _Extra) ->
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
-
-physical_clock() ->
-    {Mega,Sec,Micro} = erlang:now(),
-    (Mega*1000000+Sec)*1000000+Micro.
