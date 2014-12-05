@@ -52,9 +52,14 @@ handle_cast(_Msg, State) ->
 
 handle_info({update, RT}, C) ->
     CLT = hlc:timestamp(C),
-    RTN = RT#timestamp.wall_time + RT#timestamp.logical,
-    LTN = CLT#timestamp.wall_time + CLT#timestamp.logical,
-    io:format("UPD ~p~n", [RTN - LTN]),
+    case (RT#timestamp.wall_time + RT#timestamp.logical)
+         - (CLT#timestamp.wall_time + CLT#timestamp.logical) of
+        TNDiff when TNDiff > 1000 ->
+            io:format("UPD ~p~n", [TNDiff]);
+        TNDiff when TNDiff < -1000 ->
+            io:format("UPD ~p~n", [TNDiff]);
+        _ -> ok
+    end,
     _LT = hlc:update(C, RT),
     {noreply, C};
 handle_info({flood, T}, C) ->
