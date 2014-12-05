@@ -93,11 +93,25 @@ ts2now(#timestamp{} = T) ->
     {Mega, Sec, Micro}.
 
 % only for test
-loader(Loaders)
-  when is_integer(Loaders), Loaders >= 1 ->
-    timer:sleep(1000),
-    [spawn(fun Fire() ->
+loader({Loaders, Delay}) ->
+    [begin
+         timer:sleep(I * Delay),
+         spawn(fun Fire() ->
             erlhlc:next_now(),
-            timer:sleep(1000),
+            timer:sleep(Delay),
             Fire()
-           end) || _I <- lists:seq(1, Loaders)].
+           end)
+     end || I <- lists:seq(1, Loaders)];
+loader(M) when is_integer(M), M > 3 ->
+    F = [{I, M div I} || I <- lists:seq(2, M div 2 - 1), M rem I == 0],
+    loader(case F of
+               [] -> {1, 1000 div M};
+               F when length(F) > 2 ->
+                   {P, N} = lists:nth(length(F) div 2, F),
+                   {P, N div M * 1000};
+               F ->
+                   [{P, N}|_] = F,
+                   {P, N div M * 1000}
+           end);
+loader(M) when is_integer(M), M >= 1 ->
+    loader({1, 1000 div M}).
