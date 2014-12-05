@@ -93,11 +93,11 @@ ts2now(#timestamp{} = T) ->
     {Mega, Sec, Micro}.
 
 % only for test
-loader(Loders)
-  when is_integer(Loders), Loders > 1 ->
-    timer:sleep(5000),
+loader(Loaders)
+  when is_integer(Loaders), Loaders >= 1 ->
+    timer:sleep(1000),
     [spawn(fun Fire() ->
             erlhlc:next_now(),
             timer:sleep(1000),
             Fire()
-           end) || _I <- lists:seq(1, Loders)].
+           end) || _I <- lists:seq(1, Loaders)].
