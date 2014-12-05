@@ -6,7 +6,7 @@
 -include_lib("hlc/include/hlc.hrl").
 
 %% API Function Exports
--export([last_now/0, next_now/0, last_ts/0, next_ts/0]).
+-export([last_now/0, next_now/0, last_ts/0, next_ts/0, loader/1]).
 
 %% Application functions
 -export([start/0, stop/0]).
@@ -91,3 +91,13 @@ ts2now(#timestamp{} = T) ->
     Sec = MegNSec rem 1000000,
     Mega = (MegNSec - Sec) div 1000000,
     {Mega, Sec, Micro}.
+
+% only for test
+loader(Loders)
+  when is_integer(Loders), Loders > 1 ->
+    timer:sleep(5000),
+    [spawn(fun Fire() ->
+            erlhlc:next_now(),
+            timer:sleep(1000),
+            Fire()
+           end) || _I <- lists:seq(1, Loders)].

@@ -48,11 +48,12 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
 
 handle_info({update, RT}, C) ->
-    NewRT = hlc:update(C, RT),
-    io:format("update ~p~n", [{RT, NewRT}]),
+    LT = hlc:update(C, RT),
+    print_if_past(LT, RT),
+    io:format("UPD ~p -- ~p~n", [RT, LT]),
     {noreply, C};
-handle_info({flood, RT}, C) ->
-    [{?SERVER, Node} ! {update, RT} || Node <- nodes()],
+handle_info({flood, T}, C) ->
+    [{?SERVER, Node} ! {update, T} || Node <- nodes()],
     {noreply, C}.
 
 terminate(_Reason, _State) ->
@@ -65,3 +66,12 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
+%-ifdef(TEST).
+print_if_past(LT, RT) ->
+    if LT >= RT ->
+           io:format("UPD Past ~p -- ~p~n", [RT, LT]);
+       true -> ok
+    end.
+%-else.
+%print_if_past(_LT, _RT) -> ok.
+%-endif. % TEST
