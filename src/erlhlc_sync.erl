@@ -30,41 +30,39 @@ start_link(ClockFun) ->
 %% ------------------------------------------------------------------
 
 init([undefined]) ->
-    case hlc:new() of
+    case hlc:init([fun physical_clock/0]) of
         {ok, C} -> {ok, C};
         Error -> Error
     end;
 init([ClockFun]) ->
-    case hlc:new(ClockFun) of
+    case hlc:init([ClockFun]) of
         {ok, C} -> {ok, C};
         Error -> Error
     end.
 
-handle_call(now, _From, C) ->
-    T = hlc:now(C),
-    ?SERVER ! {flood, T},
-    {reply, T, C};
+handle_call(now, From, C) ->
+    {reply, T, C1} = hlc:handle_call(now, From, C),
+    [{?SERVER, Node} ! {update, node(), T} || Node <- nodes()],
+    {reply, T, C1};
 handle_call(timestamp, _From, C) ->
-    {reply, hlc:timestamp(C), C}.
+    {reply, CLT, C} = hlc:handle_call(timestamp, undefined, C),
+    {reply, CLT, C}.
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({update, RT}, C) ->
-    CLT = hlc:timestamp(C),
-    case (RT#timestamp.wall_time + RT#timestamp.logical)
-         - (CLT#timestamp.wall_time + CLT#timestamp.logical) of
-        TNDiff when TNDiff > 1000 ->
-            io:format("UPD ~p~n", [TNDiff]);
-        TNDiff when TNDiff < -1000 ->
-            io:format("UPD ~p~n", [TNDiff]);
-        _ -> ok
-    end,
-    _LT = hlc:update(C, RT),
-    {noreply, C};
-handle_info({flood, T}, C) ->
-    [{?SERVER, Node} ! {update, T} || Node <- nodes()],
-    {noreply, C}.
+handle_info({update, N, RT}, C) ->
+    %{reply, CLT, C} = hlc:handle_call(timestamp, undefined, C),
+    %case (RT#timestamp.wall_time + RT#timestamp.logical)
+    %     - (CLT#timestamp.wall_time + CLT#timestamp.logical) of
+    %    TNDiff when TNDiff > 1000 ->
+    %        io:format("UPD ~p~n", [TNDiff]);
+    %    TNDiff when TNDiff < -1000 ->
+    %        io:format("UPD ~p~n", [TNDiff]);
+    %    _ -> ok
+    %end,
+    {reply, _LT, C1} = hlc:handle_call({update, N, RT}, undefined, C),
+    {noreply, C1}.
 
 terminate(_Reason, _State) ->
     ok.
@@ -75,3 +73,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
+
+physical_clock() ->
+    {Mega,Sec,Micro} = erlang:now(),
+    (Mega*1000000+Sec)*1000000+Micro.
