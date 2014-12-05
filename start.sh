@@ -2,6 +2,7 @@
 
 # Parameters:  Number_of_nodes
 
+unamestr=`uname`
 if [[ "$unamestr" == 'Linux' ]]; then
      exename=erl
 else
@@ -29,9 +30,10 @@ echo "Starting ERLHLC (Opts)"
 echo "------------------------------------------"
 echo "Cookie    : $cookie"
 echo "EBIN Path : $paths"
+echo "Command   : $exename $start_opts -s erlhlc"
 echo "------------------------------------------"
 
-# Starting dderl
+# Starting erlhlc
 $exename $start_opts -s erlhlc
 
 nodes=0
